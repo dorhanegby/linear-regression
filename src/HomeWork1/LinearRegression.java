@@ -15,7 +15,7 @@ public class LinearRegression implements Classifier {
     private int m_ClassIndex;
 	private int m_truNumAttributes;
 	private double[] m_coefficients;
-	private double m_alpha = Math.pow(3, -4);
+	private double m_alpha;
 	
 	//the method which runs to train the linear regression predictor, i.e.
 	//finds its weights.
@@ -25,7 +25,7 @@ public class LinearRegression implements Classifier {
 		m_ClassIndex = trainingData.classIndex();
 		Instances norm_data = normalize(trainingData);
 		trainingData.setClassIndex(m_ClassIndex);
-		//findAlpha(norm_data);
+		findAlpha(norm_data);
 		m_coefficients = gradientDescent(norm_data, MAX_ITERATIONS, initCoefficients());
 		
 	}
@@ -105,7 +105,6 @@ public class LinearRegression implements Classifier {
 			else if(iterations % 100 == 0) {
 				prev_error = error;
 				error = calculateMSE(trainingData, coefficients);
-				System.out.println(prev_error - error);
 			}
 			temp_coefficients[0] = coefficients[0] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, 0);
 			for (int j = 1; j <= m_ClassIndex; j++) { // Updating thetas
@@ -169,7 +168,6 @@ public class LinearRegression implements Classifier {
 		for(int i=0;i<testData.numInstances();i++) {
 			Instance dataRow = testData.instance(i);
 			double actual = getActual(dataRow);
-			double pred = prediction(coefficients, dataRow);
 			sum += Math.pow(prediction(coefficients, dataRow) - actual, 2);
 		}
 		return constant * sum;
