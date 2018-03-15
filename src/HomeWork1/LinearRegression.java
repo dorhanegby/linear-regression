@@ -4,6 +4,8 @@ import weka.classifiers.Classifier;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.Capabilities;
+import weka.filters.unsupervised.attribute.Normalize;
+import weka.filters.Filter;
 
 public class LinearRegression implements Classifier {
 
@@ -12,19 +14,25 @@ public class LinearRegression implements Classifier {
     private int m_ClassIndex;
 	private int m_truNumAttributes;
 	private double[] m_coefficients;
-	private double m_alpha = Math.pow(3, -14);
+	private double m_alpha = Math.pow(3, -4);
 	
 	//the method which runs to train the linear regression predictor, i.e.
 	//finds its weights.
 	@Override
 	public void buildClassifier(Instances trainingData) throws Exception {
 		m_ClassIndex = trainingData.classIndex();
-		// TODO: normilize the data
+		Instances norm_data = normalize(trainingData);
 		trainingData.setClassIndex(m_ClassIndex);
-		m_coefficients = gradientDescent(trainingData);
+		m_coefficients = gradientDescent(norm_data);
 		
 	}
-	
+
+	private Instances normalize(Instances trainingData) throws Exception {
+		Normalize normalize = new Normalize();
+		normalize.setInputFormat(trainingData);
+		return Filter.useFilter(trainingData, normalize);
+	}
+
 	private void findAlpha(Instances data) throws Exception {
 		
 	}
@@ -39,22 +47,27 @@ public class LinearRegression implements Classifier {
 	 */
 	private double[] gradientDescent(Instances trainingData)
 			throws Exception {
-		double [] coefficients = new double[m_ClassIndex + 1];
+		double[] coefficients = new double[m_ClassIndex + 1];
 		// Sets all values to INIT_VALUE as a guess
-		for(int i = 0;i < coefficients.length;i++) {
+		for (int i = 0; i < coefficients.length; i++) {
 			coefficients[i] = INIT_VALUE;
 		}
-
-		for(int i =0;i<100000; i++) { // TODO: define a stop condition
-			double [] temp_coefficients = coefficients.clone();
+		double[] temp_coefficients = coefficients.clone();
+		double sum = -1;
+		while (sum != 0) { // TODO: define a stop condition
+			sum = 0;
 			temp_coefficients[0] = coefficients[0] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, 0);
-
-			for(int j=1;j<m_ClassIndex;j++) { // Updating thetas
-				double fix = coefficients[j] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, j);
-				System.out.println(fix);
-				temp_coefficients[j] = fix;
+			sum += Math.pow((temp_coefficients[0] - coefficients[0]), 2);
+			for (int j = 1; j <= m_ClassIndex; j++) { // Updating thetas
+				temp_coefficients[j] = coefficients[j] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, j);
+				sum += Math.pow((temp_coefficients[0] - coefficients[0]), 2);
 			}
+			System.out.println(sum);
+			coefficients = temp_coefficients.clone();
 		}
+
+		for (int j = 0; j < coefficients.length; j++)
+			System.out.println("theta " + j + ": " + temp_coefficients[j]);
 
 		return coefficients;
 	}
@@ -64,18 +77,25 @@ public class LinearRegression implements Classifier {
 		double sum = 0;
 		for(int i=0;i<trainingData.numInstances();i++) { // Sigma
 			Instance dataRow = trainingData.instance(i);
-			double partial_sum = 0;
-			for(int j=1; j< dataRow.numAttributes(); j++) { // parentazis
-				partial_sum += coefficients[j] * dataRow.value(j - 1);
-			}
-			partial_sum += coefficients[0] - dataRow.value(dataRow.numAttributes() - 1); // add constant and substract actual
+			double partial_sum = prediction(coefficients, dataRow);
+			double actual = dataRow.value(dataRow.numAttributes() - 1);
+			partial_sum -=  actual;
 			if(indexToUpdate != 0) {
 				partial_sum *= dataRow.value(indexToUpdate - 1); // multiply by inner derviative
 			}
 			sum += partial_sum;
 		}
-
 		return sum;
+	}
+
+	private double prediction(double[] coefficients, Instance instance) {
+		double partial_sum = 0;
+		for(int j=1; j< instance.numAttributes(); j++) {
+			partial_sum += coefficients[j] * instance.value(j - 1);
+		}
+		partial_sum += coefficients[0];
+
+		return partial_sum;
 	}
 
 	/**
@@ -87,7 +107,7 @@ public class LinearRegression implements Classifier {
 	 * @throws Exception
 	 */
 	public double regressionPrediction(Instance instance) throws Exception {
-		return 0;
+		return prediction(m_coefficients, instance);
 	}
 	
 	/**
