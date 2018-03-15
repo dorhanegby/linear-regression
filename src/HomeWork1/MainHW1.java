@@ -7,6 +7,8 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import weka.core.Instances;
+import weka.core.Instance;
+
 
 public class MainHW1 {
 	
@@ -37,11 +39,11 @@ public class MainHW1 {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		System.out.println(new File(".").getAbsoluteFile());
 		//load data
 		Instances data = loadData("./src/Data/wind_testing.txt");
 		//find best alpha and build classifier with all attributes
-
+		LinearRegression lr = new LinearRegression();
+		lr.buildClassifier(data);
    		//build classifiers with all 3 attributes combinations
 		
 	}
