@@ -7,26 +7,34 @@ import weka.core.Capabilities;
 import weka.filters.unsupervised.attribute.Normalize;
 import weka.filters.Filter;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Iterator;
+
 public class LinearRegression implements Classifier {
 
 	private static final double INIT_VALUE = 1.0 / 14.0;
+	private static final int MAX_ITERATIONS = 20000;
 	
     private int m_ClassIndex;
 	private int m_truNumAttributes;
 	private double[] m_coefficients;
-	private double m_alpha = Math.pow(3, -4);
+	private double m_alpha;
 	
 	//the method which runs to train the linear regression predictor, i.e.
 	//finds its weights.
 	@Override
 	public void buildClassifier(Instances trainingData) throws Exception {
+
 		m_ClassIndex = trainingData.classIndex();
 		Instances norm_data = normalize(trainingData);
 		trainingData.setClassIndex(m_ClassIndex);
-		m_coefficients = gradientDescent(norm_data);
+		findAlpha(norm_data);
+		m_coefficients = gradientDescent(norm_data, MAX_ITERATIONS, initCoefficients());
 		
 	}
-
+	// TODO: Maybe we should implement it on our own
 	private Instances normalize(Instances trainingData) throws Exception {
 		Normalize normalize = new Normalize();
 		normalize.setInputFormat(trainingData);
@@ -34,7 +42,48 @@ public class LinearRegression implements Classifier {
 	}
 
 	private void findAlpha(Instances data) throws Exception {
-		
+		double[] errosByAlpha = new double[17];
+		double error = 0;
+		double prev_error = 0;
+		for (int i=17;i>0;i--) {
+			m_alpha = Math.pow(3, -i);
+			double[] coefficients = initCoefficients();
+			for(int j=1;j<200;j++) {
+				coefficients = gradientDescent(data, 100, coefficients);
+				if(j == 1) {
+					error = calculateMSE(data, coefficients);
+				}
+				else {
+					prev_error = error;
+					error = calculateMSE(data, coefficients);
+					if(prev_error < error) {
+						error = prev_error;
+						break;
+					}
+				}
+			}
+			errosByAlpha[i - 1] = error;
+		}
+		int minIndex = 16;
+		double minValue = errosByAlpha[16];
+
+		for(int i = 15; i>= 0;i--) {
+			if(errosByAlpha[i] < minValue) {
+				minIndex = i;
+				minValue = errosByAlpha[i];
+			}
+		}
+
+		m_alpha = Math.pow(3, -(minIndex + 1));
+	}
+
+	private double[] initCoefficients() {
+		double[] coefficients = new double[m_ClassIndex + 1];
+		for (int i = 0; i < coefficients.length; i++) {
+			coefficients[i] = INIT_VALUE;
+		}
+
+		return coefficients;
 	}
 	
 	/**
@@ -45,16 +94,13 @@ public class LinearRegression implements Classifier {
 	 * @param trainingData
 	 * @throws Exception
 	 */
-	private double[] gradientDescent(Instances trainingData)
+	private double[] gradientDescent(Instances trainingData, int stopCondition, double[] start_coefficients)
 			throws Exception {
-		double[] coefficients = new double[m_ClassIndex + 1];
-		// Sets all values to INIT_VALUE as a guess
-		for (int i = 0; i < coefficients.length; i++) {
-			coefficients[i] = INIT_VALUE;
-		}
+		double[] coefficients = start_coefficients;
 		double[] temp_coefficients = coefficients.clone();
 		double sum = -1;
-		while (sum != 0) { // TODO: define a stop condition
+		while (sum != 0 && stopCondition > 0) {
+			stopCondition--;
 			sum = 0;
 			temp_coefficients[0] = coefficients[0] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, 0);
 			sum += Math.pow((temp_coefficients[0] - coefficients[0]), 2);
@@ -62,12 +108,8 @@ public class LinearRegression implements Classifier {
 				temp_coefficients[j] = coefficients[j] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, j);
 				sum += Math.pow((temp_coefficients[0] - coefficients[0]), 2);
 			}
-			System.out.println(sum);
 			coefficients = temp_coefficients.clone();
 		}
-
-		for (int j = 0; j < coefficients.length; j++)
-			System.out.println("theta " + j + ": " + temp_coefficients[j]);
 
 		return coefficients;
 	}
@@ -78,7 +120,7 @@ public class LinearRegression implements Classifier {
 		for(int i=0;i<trainingData.numInstances();i++) { // Sigma
 			Instance dataRow = trainingData.instance(i);
 			double partial_sum = prediction(coefficients, dataRow);
-			double actual = dataRow.value(dataRow.numAttributes() - 1);
+			double actual = getActual(dataRow);
 			partial_sum -=  actual;
 			if(indexToUpdate != 0) {
 				partial_sum *= dataRow.value(indexToUpdate - 1); // multiply by inner derviative
@@ -118,13 +160,19 @@ public class LinearRegression implements Classifier {
 	 * @return
 	 * @throws Exception
 	 */
-	public double calculateMSE(Instances testData) throws Exception {
+	public double calculateMSE(Instances testData, double[] coefficients) throws Exception {
 		double constant = 1.0 / 2.0 * testData.numInstances();
 		double sum = 0;
 		for(int i=0;i<testData.numInstances();i++) {
-			sum += Math.pow(prediction(m_coefficients, testData.instance(i)), 2);
+			Instance dataRow = testData.instance(i);
+			double actual = getActual(dataRow);
+			sum += Math.pow(prediction(coefficients, dataRow) - actual, 2);
 		}
 		return constant * sum;
+	}
+
+	private double getActual(Instance instance) {
+		return instance.value(instance.numAttributes() - 1);
 	}
     
     @Override
