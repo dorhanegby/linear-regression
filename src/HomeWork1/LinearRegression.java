@@ -7,11 +7,6 @@ import weka.core.Capabilities;
 import weka.filters.unsupervised.attribute.Normalize;
 import weka.filters.Filter;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Iterator;
-
 public class LinearRegression implements Classifier {
 
 	private static final double INIT_VALUE = 1.0 / 14.0;
@@ -20,7 +15,7 @@ public class LinearRegression implements Classifier {
     private int m_ClassIndex;
 	private int m_truNumAttributes;
 	private double[] m_coefficients;
-	private double m_alpha;
+	private double m_alpha = Math.pow(3, -4);
 	
 	//the method which runs to train the linear regression predictor, i.e.
 	//finds its weights.
@@ -30,7 +25,7 @@ public class LinearRegression implements Classifier {
 		m_ClassIndex = trainingData.classIndex();
 		Instances norm_data = normalize(trainingData);
 		trainingData.setClassIndex(m_ClassIndex);
-		findAlpha(norm_data);
+		//findAlpha(norm_data);
 		m_coefficients = gradientDescent(norm_data, MAX_ITERATIONS, initCoefficients());
 		
 	}
@@ -98,15 +93,23 @@ public class LinearRegression implements Classifier {
 			throws Exception {
 		double[] coefficients = start_coefficients;
 		double[] temp_coefficients = coefficients.clone();
-		double sum = -1;
-		while (sum != 0 && stopCondition > 0) {
+		double error = Double.MAX_VALUE;
+		double prev_error = Double.MAX_VALUE;
+		int iterations = 0;
+		while ((iterations < 100 || prev_error - error > 0.003) && stopCondition > 0) {
 			stopCondition--;
-			sum = 0;
+			iterations++;
+			if(iterations == 100) {
+				error = calculateMSE(trainingData, coefficients);
+			}
+			else if(iterations % 100 == 0) {
+				prev_error = error;
+				error = calculateMSE(trainingData, coefficients);
+				System.out.println(prev_error - error);
+			}
 			temp_coefficients[0] = coefficients[0] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, 0);
-			sum += Math.pow((temp_coefficients[0] - coefficients[0]), 2);
 			for (int j = 1; j <= m_ClassIndex; j++) { // Updating thetas
 				temp_coefficients[j] = coefficients[j] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, j);
-				sum += Math.pow((temp_coefficients[0] - coefficients[0]), 2);
 			}
 			coefficients = temp_coefficients.clone();
 		}
@@ -166,6 +169,7 @@ public class LinearRegression implements Classifier {
 		for(int i=0;i<testData.numInstances();i++) {
 			Instance dataRow = testData.instance(i);
 			double actual = getActual(dataRow);
+			double pred = prediction(coefficients, dataRow);
 			sum += Math.pow(prediction(coefficients, dataRow) - actual, 2);
 		}
 		return constant * sum;
