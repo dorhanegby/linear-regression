@@ -3,6 +3,7 @@ package HomeWork1;
 import weka.classifiers.Classifier;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.Capabilities;
 
 public class LinearRegression implements Classifier {
 	
@@ -35,6 +36,7 @@ public class LinearRegression implements Classifier {
 	 */
 	private double[] gradientDescent(Instances trainingData)
 			throws Exception {
+		return null;
 	}
 	
 	/**
@@ -57,7 +59,7 @@ public class LinearRegression implements Classifier {
 	 * @return
 	 * @throws Exception
 	 */
-	public double calculateMSE(Instances data) throws Exception {
+	public double calculateMSE(Instances testData) throws Exception {
 
 		return 0;
 	}
