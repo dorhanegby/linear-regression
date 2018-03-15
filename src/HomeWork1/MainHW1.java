@@ -1,6 +1,7 @@
 package HomeWork1;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -36,8 +37,9 @@ public class MainHW1 {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		System.out.println(new File(".").getAbsoluteFile());
 		//load data
-		Instances data = loadData("Data/wind_testing.txt");
+		Instances data = loadData("./src/Data/wind_testing.txt");
 		//find best alpha and build classifier with all attributes
 
    		//build classifiers with all 3 attributes combinations
