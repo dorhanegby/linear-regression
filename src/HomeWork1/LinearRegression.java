@@ -119,8 +119,12 @@ public class LinearRegression implements Classifier {
 	 * @throws Exception
 	 */
 	public double calculateMSE(Instances testData) throws Exception {
-
-		return 0;
+		double constant = 1.0 / 2.0 * testData.numInstances();
+		double sum = 0;
+		for(int i=0;i<testData.numInstances();i++) {
+			sum += Math.pow(prediction(m_coefficients, testData.instance(i)), 2);
+		}
+		return constant * sum;
 	}
     
     @Override
