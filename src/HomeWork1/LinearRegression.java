@@ -23,11 +23,15 @@ public class LinearRegression implements Classifier {
 	public void buildClassifier(Instances trainingData) throws Exception {
 
 		m_ClassIndex = trainingData.classIndex();
-		Instances norm_data = normalize(trainingData);
+		// Instances norm_data = normalize(trainingData);
 		trainingData.setClassIndex(m_ClassIndex);
-		findAlpha(norm_data);
-		m_coefficients = gradientDescent(norm_data, MAX_ITERATIONS, initCoefficients());
-		
+		m_alpha = findAlpha(trainingData);
+		m_coefficients = gradientDescent(trainingData, MAX_ITERATIONS, initCoefficients());
+
+		// printing coefficients
+		for(int i =0;i<m_coefficients.length;i++) {
+			System.out.println("Theta " + i + " :" + m_coefficients[i]);
+		}
 	}
 	// TODO: Maybe we should implement it on our own
 	private Instances normalize(Instances trainingData) throws Exception {
@@ -36,22 +40,24 @@ public class LinearRegression implements Classifier {
 		return Filter.useFilter(trainingData, normalize);
 	}
 
-	private void findAlpha(Instances data) throws Exception {
+	private double findAlpha(Instances data) throws Exception {
 		double[] errosByAlpha = new double[17];
-		double error = 0;
-		double prev_error = 0;
 		for (int i=17;i>0;i--) {
 			m_alpha = Math.pow(3, -i);
+			System.out.println("checking alpha: 3^" + -i);
 			double[] coefficients = initCoefficients();
-			for(int j=1;j<200;j++) {
+			double error = 0;
+			double prev_error = 0;
+			for(int j=0;j<200;j++) {
 				coefficients = gradientDescent(data, 100, coefficients);
-				if(j == 1) {
+				if(j == 0) {
 					error = calculateMSE(data, coefficients);
 				}
 				else {
 					prev_error = error;
 					error = calculateMSE(data, coefficients);
 					if(prev_error < error) {
+						System.out.println("stopped improving");
 						error = prev_error;
 						break;
 					}
@@ -68,8 +74,8 @@ public class LinearRegression implements Classifier {
 				minValue = errosByAlpha[i];
 			}
 		}
-
-		m_alpha = Math.pow(3, -(minIndex + 1));
+		System.out.println("best alpha: 3^" + -(minIndex + 1));
+		return Math.pow(3, -(minIndex + 1));
 	}
 
 	private double[] initCoefficients() {
@@ -77,7 +83,6 @@ public class LinearRegression implements Classifier {
 		for (int i = 0; i < coefficients.length; i++) {
 			coefficients[i] = INIT_VALUE;
 		}
-
 		return coefficients;
 	}
 	
@@ -91,12 +96,12 @@ public class LinearRegression implements Classifier {
 	 */
 	private double[] gradientDescent(Instances trainingData, int stopCondition, double[] start_coefficients)
 			throws Exception {
-		double[] coefficients = start_coefficients;
+		double[] coefficients = start_coefficients.clone();
 		double[] temp_coefficients = coefficients.clone();
-		double error = Double.MAX_VALUE;
+		double error = 0;
 		double prev_error = Double.MAX_VALUE;
 		int iterations = 0;
-		while ((iterations < 100 || prev_error - error > 0.003) && stopCondition > 0) {
+		while (prev_error - error > 0.003 && stopCondition > 0) {
 			stopCondition--;
 			iterations++;
 			if(iterations == 100) {
@@ -106,13 +111,15 @@ public class LinearRegression implements Classifier {
 				prev_error = error;
 				error = calculateMSE(trainingData, coefficients);
 			}
-			temp_coefficients[0] = coefficients[0] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, 0);
+			temp_coefficients[0] = coefficients[0] - ((m_alpha / trainingData.numInstances()) * sumOfDistances(coefficients, trainingData, 0));
 			for (int j = 1; j <= m_ClassIndex; j++) { // Updating thetas
-				temp_coefficients[j] = coefficients[j] - m_alpha * 1 / m_ClassIndex * sumOfDistances(coefficients, trainingData, j);
+				temp_coefficients[j] = coefficients[j] - ((m_alpha / trainingData.numInstances()) * sumOfDistances(coefficients, trainingData, j));
 			}
 			coefficients = temp_coefficients.clone();
 		}
-
+		System.out.println("finished with mean square error of: " + error);
+		System.out.println("i ran " + stopCondition + " iterations");
+		System.out.println("my last improve was " + (prev_error - error));
 		return coefficients;
 	}
 
@@ -163,7 +170,7 @@ public class LinearRegression implements Classifier {
 	 * @throws Exception
 	 */
 	public double calculateMSE(Instances testData, double[] coefficients) throws Exception {
-		double constant = 1.0 / 2.0 * testData.numInstances();
+		double constant = 1.0 / testData.numInstances();
 		double sum = 0;
 		for(int i=0;i<testData.numInstances();i++) {
 			Instance dataRow = testData.instance(i);
