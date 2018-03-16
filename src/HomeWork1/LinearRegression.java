@@ -9,7 +9,7 @@ import weka.filters.Filter;
 
 public class LinearRegression implements Classifier {
 
-	private static final double INIT_VALUE = 0;
+	private static final double INIT_VALUE = 1;
 	private static final int MAX_ITERATIONS = 200000;
 	
     private int m_ClassIndex;
@@ -71,10 +71,10 @@ public class LinearRegression implements Classifier {
 
 	private double[] initCoefficients() {
 		double[] coefficients = new double[m_ClassIndex + 1];
-		for (int i = 0; i < coefficients.length; i++) {
+		for (int i = 1; i < coefficients.length; i++) {
 			coefficients[i] = INIT_VALUE;
 		}
-
+		coefficients[0] = 17;
 		return coefficients;
 	}
 	
