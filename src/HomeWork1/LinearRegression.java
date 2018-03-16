@@ -9,13 +9,12 @@ import weka.filters.Filter;
 
 public class LinearRegression implements Classifier {
 
-	private static final double INIT_VALUE = 0.3;
+	private static final double INIT_VALUE = 0;
 	private static final int MAX_ITERATIONS = 200000;
 	
     private int m_ClassIndex;
-	private int m_truNumAttributes;
 	private double[] m_coefficients;
-	private double m_alpha = Math.pow(3, -8);
+	private double m_alpha;
 
 	private boolean wasAlphaCalc = false;
 	
@@ -26,38 +25,30 @@ public class LinearRegression implements Classifier {
 
 		m_ClassIndex = trainingData.classIndex();
 
-		// Instances norm_data = normalize(trainingData);
 		trainingData.setClassIndex(m_ClassIndex);
-//		if(!wasAlphaCalc) {
-//			m_alpha = findAlpha(trainingData);
-//			wasAlphaCalc = true;
-//		}
+		if(!wasAlphaCalc) {
+			m_alpha = findAlpha(trainingData);
+			wasAlphaCalc = true;
+		}
 		m_coefficients = gradientDescent(trainingData, MAX_ITERATIONS, initCoefficients());
-
-	}
-	// TODO: Maybe we should implement it on our own
-	private Instances normalize(Instances trainingData) throws Exception {
-		Normalize normalize = new Normalize();
-		normalize.setInputFormat(trainingData);
-		return Filter.useFilter(trainingData, normalize);
 	}
 
 	private double findAlpha(Instances data) throws Exception {
+		System.out.println("Finding Best Alpha...");
 		double[] errosByAlpha = new double[17];
-		for (int i=17;i>0;i--) {
+		for (int i = 17; i > 0; i--) {
 			m_alpha = Math.pow(3, -i);
 			double[] coefficients = initCoefficients();
 			double error = 0;
 			double prev_error = 0;
-			for(int j=0;j<200;j++) {
+			for (int j = 0; j < 200; j++) {
 				coefficients = gradientDescent(data, 100, coefficients);
-				if(j == 0) {
+				if (j == 0) {
 					error = calculateMSE(data, coefficients);
-				}
-				else {
+				} else {
 					prev_error = error;
 					error = calculateMSE(data, coefficients);
-					if(prev_error < error) {
+					if (prev_error < error) {
 						error = prev_error;
 						break;
 					}
@@ -68,8 +59,8 @@ public class LinearRegression implements Classifier {
 		int minIndex = 16;
 		double minValue = errosByAlpha[16];
 
-		for(int i = 15; i>= 0;i--) {
-			if(errosByAlpha[i] < minValue) {
+		for (int i = 15; i >= 0; i--) {
+			if (errosByAlpha[i] < minValue) {
 				minIndex = i;
 				minValue = errosByAlpha[i];
 			}
